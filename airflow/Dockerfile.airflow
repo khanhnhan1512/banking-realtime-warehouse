@@ -1,0 +1,9 @@
+FROM apache/airflow:3.0.6-python3.11
+
+USER airflow
+
+RUN pip install --no-cache-dir dbt-core dbt-snowflake
+
+COPY airflow/dags /opt/airflow/dags
+
+WORKDIR /opt/airflow

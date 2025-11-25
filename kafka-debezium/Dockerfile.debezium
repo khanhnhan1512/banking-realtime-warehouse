@@ -1,0 +1,7 @@
+FROM debezium/connect:2.2
+
+USER root
+
+RUN confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.0
+
+USER kafka
