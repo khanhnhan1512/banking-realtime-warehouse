@@ -73,6 +73,7 @@ x-airflow-common:
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/.env:/opt/airflow/.env # To load environment variables from .env file in dags python files
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
@@ -92,12 +93,12 @@ x-airflow-common:
 
 services:
   postgres:
-    image: postgres:14.19
+    image: postgres:15
     container_name: airflow-postgres
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - airflow-postgres-db-volume:/var/lib/postgresql/data
     healthcheck:

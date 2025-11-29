@@ -1,8 +1,23 @@
 FROM apache/airflow:3.0.6-python3.11
 
+USER root
+
+# Cài git (Bắt buộc để chạy dbt deps)
+RUN apt-get update && \
+    apt-get install -y git && \
+    apt-get clean
+
 USER airflow
 
-RUN pip install --no-cache-dir dbt-core dbt-snowflake
+RUN pip install --no-cache-dir \
+    dbt-core \
+    dbt-snowflake \
+    boto3 \
+    python-dotenv \
+    snowflake-connector-python \
+    pandas \
+    apache-airflow-providers-snowflake \
+    apache-airflow-providers-amazon
 
 COPY airflow/dags /opt/airflow/dags
 
