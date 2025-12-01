@@ -1,0 +1,138 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: "A dimension table containing customer information."
+    columns:
+      - name: customer_id
+        description: "The unique identifier for each customer."
+        tests:
+          - unique
+          - not_null
+      - name: full_name
+        description: "The full name of the customer."
+      - name: email
+        description: "The email address of the customer."
+        tests:
+          - not_null
+      - name: phone
+        description: "The phone number of the customer."
+      - name: created_at
+        description: "The timestamp when the customer record was created."
+        tests:
+          - not_null
+      - name: updated_at
+        description: "The timestamp when the customer record was last updated."
+
+  - name: dim_accounts
+    description: "A dimension table containing account information."
+    columns:
+      - name: dbt_scd_id
+        description: "The surrogate key for slowly changing dimension handling."
+        tests:
+          - unique
+          - not_null
+      - name: account_id
+        description: "The unique identifier for each account."
+        tests:
+          - not_null
+      - name: account_type
+        description: "The type of the account (e.g., savings, checking)."
+        tests:
+          - not_null
+      - name: current_balance
+        description: "The current balance of the account."
+        tests:
+          - not_null
+          - check_positive_value
+      - name: currency
+        description: "The currency of the account."
+        tests:
+          - not_null
+      - name: created_at
+        description: "The timestamp when the account record was created."
+        tests:
+          - not_null
+      - name: updated_at
+        description: "The timestamp when the account record was last updated."
+
+  - name: fct_transactions
+    description: "A fact table containing transaction records."
+    columns:
+      - name: transaction_id
+        description: "The unique identifier for each transaction."
+        tests:
+          - unique
+          - not_null
+      - name: account_id
+        description: "The identifier for the account associated with the transaction."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_accounts')
+                field: account_id
+      - name: related_account_id
+        description: "The identifier for the related account in case of transfers."
+      - name: amount
+        description: "The amount of the transaction."
+        tests:
+          - not_null
+          - check_positive_value
+      - name: transaction_type
+        description: "The type of the transaction."
+        tests:
+          - not_null
+      - name: transaction_date
+        description: "The date and time when the transaction occurred."
+        tests:
+          - not_null
+      - name: status
+        description: "The status of the transaction."
+      - name: description
+        description: "A description of the transaction."
+      - name: transfer_scope
+        description: "Indicates whether the transfer is INTERNAL, EXTERNAL, or NOT_APPLICABLE."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['INTERNAL', 'EXTERNAL', 'NOT_APPLICABLE']
+      - name: cash_flow
+        description: "Indicates whether the cash flow is INFLOW, OUTFLOW, or UNKNOWN."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['INFLOW', 'OUTFLOW', 'UNKNOWN']
+
+  - name: map_account_owner
+    description: "A mapping table linking customers to their accounts."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - customer_id
+            - account_id
+    columns:
+      - name: customer_id
+        description: "The unique identifier for each customer."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
+      - name: account_id
+        description: "The unique identifier for each account."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_accounts')
+                field: account_id
+      - name: account_role
+        description: "The role of the customer for the account"
+        tests:
+          - not_null
+      - name: mapping_created_at
+        description: "The timestamp when the customer-account mapping was created."
+        tests:
+          - not_null

@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: raw
+    database: REALTIME_BANKING
+    schema: RAW
+    tables:
+      - name: customers
+      - name: accounts
+      - name: customers_accounts
+      - name: transactions

@@ -12,8 +12,8 @@ load_dotenv()
 
 # Configurable parameters
 NUM_CUSTOMERS = 5
-NUM_ACCOUNTS = 8 
-NUM_TRANSACTIONS = 10
+NUM_ACCOUNTS = 5 
+NUM_TRANSACTIONS = 5
 
 MAX_TRANSACTION_AMOUNT = 10_000_000.00
 CURRENCY = 'VND'
@@ -122,10 +122,15 @@ def generate_data():
     
     print(f"--- 4. Generating {NUM_TRANSACTIONS} Transactions ---")
     # Transactions 
+    # get some existing customer ids to increase realism
+    cur.execute("SELECT id FROM accounts ORDER BY RANDOM() LIMIT 20")
+    old_account_ids = [row[0] for row in cur.fetchall()]
+
+    all_account_ids = new_account_ids + old_account_ids
     trans_type_options = ['DEPOSIT', 'WITHDRAWAL', 'TRANSFER']
     
     for _ in range(NUM_TRANSACTIONS):
-        account_id = random.choice(new_account_ids)
+        account_id = random.choice(all_account_ids)
         txn_type = random.choice(trans_type_options)
         amount = random_money(Decimal('10000.00'), Decimal(str(MAX_TRANSACTION_AMOUNT)))
         description = fake.sentence(nb_words=5)

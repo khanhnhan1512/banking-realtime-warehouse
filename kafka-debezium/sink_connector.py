@@ -19,7 +19,7 @@ TOPICS = [
     'banking_server.public.transactions',
 ]
 # Number of messages to process in each batch
-BATCH_SIZE = 50
+BATCH_SIZE = 5
 # S3 Bucket name
 BUCKET_NAME = os.getenv("MINIO_BUCKET")
 # Initialize connections
