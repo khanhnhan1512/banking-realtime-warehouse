@@ -1,9 +1,9 @@
 <h1 align="center">Real-time Banking Data Warehouse</h1>
 
-<p align="center">
+<!-- <p align="center">
   <a href="README.md">English</a> ·
   <a href="README.vi.md">Tiếng Việt</a>
-</p>
+</p> -->
 
 This project implements an end-to-end **Real-time Data Engineering** pipeline for a Banking System. It simulates high-volume transactional data, captures changes in real-time using **CDC (Change Data Capture)**, and builds a scalable Data Warehouse following the **ELT** paradigm.
 
@@ -38,7 +38,7 @@ The pipeline is designed to handle the complete lifecycle of data:
 | **MinIO** | Object Storage (Data Lake) |
 | **Apache Airflow** | Workflow Orchestration (Python Operator, Bash Operator) |
 | **Snowflake** | Cloud Data Warehouse |
-| **dbt** | Data Transformation & Testing (SCD Type 2, Generic Tests) |
+| **dbt** | Data Transformation, Snapshot (SCD Type 2) & Testing (Build-in & Generic Tests) |
 | **Docker Compose** | Infrastructure as Code (IaC) |
 
 # Key Features Implemented
@@ -83,6 +83,8 @@ The pipeline is designed to handle the complete lifecycle of data:
 ```bash
 uv sync
 ```
+3. Check for python scripts and docker-compose files in the project directory to see which environment variables need to be set.
+4. Create a `.env` file in the root directory and other necessary folders (`airflow/dags/`, `scripts`, ...) and fill in the required environment variables. 
 ### Infrastructure setup
 Build the custom Airflow image
 ```bash
@@ -124,7 +126,15 @@ GRANT ALL ON FUTURE SCHEMAS IN DATABASE REALTIME_BANKING TO ROLE TRANSFORM;
 GRANT ALL ON ALL TABLES IN SCHEMA REALTIME_BANKING.RAW TO ROLE TRANSFORM;
 GRANT ALL ON FUTURE TABLES IN SCHEMA REALTIME_BANKING.RAW TO ROLE TRANSFORM;
 ```
-
+3. Create tables for schema `RAW` using the following script
+```sql
+CREATE TABLE IF NOT EXISTS customers (v VARIANT);
+CREATE TABLE IF NOT EXISTS accounts (v VARIANT);
+CREATE TABLE IF NOT EXISTS customers_accounts (v VARIANT);
+CREATE TABLE IF NOT EXISTS transactions (v VARIANT);
+```
+- Here is the result after creating empty tables in Snowflake
+![Snowflake Tables](./images/table_snowflake.png)
 ### Configure `dbt` profiles
 1. Initialize `dbt` project
 ```bash
@@ -132,9 +142,55 @@ dbt init realtime_banking_dbt
 ```
 2. Fill in the `profiles.yml` file with your Snowflake credentials as below
 ![dbt profiles.yml](./images//dbt_profiles.png)
+3. Copy the `profiles.yml` file to the `realtime_banking_dbt` folder because we will bind the folder as a volume in the Airflow container later.
 
 # How to run the project
+### 1. Start the infrastructure using Docker Compose
+```bash
+docker-compose -f docker-compose.yaml up -d
+docker-compose -f docker-compose.airflow.yaml up -d
+```
 
+### 2. Connect to PostgreSQL using Dbeaver to create source tables
+- Use `postgres/create_tables.sql` to create the source tables in PostgreSQL.
+- Use `postgres/trigger_updated_at.sql` to create triggers for `updated_at` columns.
+
+### 3. Run the data generator script to populate source data
+```bash
+python scripts/data_faker.py
+```
+- You can stop the script by pressing `CTRL + C`. Or you can let it run only once by:
+```bash
+python scripts/data_faker.py --once
+```
+### 4. Start the `Source Connector` to capture changes from PostgreSQL and stream to Kafka
+- Open another terminal and run:
+```bash
+python kafka-debezium/source_connector.py
+```
+- Now you can monitor `kafka` to see the messages being produced and consumed at real-time: `http://localhost:8081/`
+![Kafka UI](./images/kafka_ui.png)
+- Example of messages in the `banking_server.public.accounts` topic:
+![Kafka Topic Messages](./images/kafka_msg.png)
+### 5. Start the `Sink Connector` to consume from Kafka and upload Parquet files to MinIO
+- Open another terminal and run:
+```bash
+python kafka-debezium/sink_connector.py
+```
+- You can check MinIO to see the Parquet files being uploaded: `http://localhost:9001/`
+![MinIO UI](./images/minio.png)
+- **Note**: The Parquet files will be stored in the `processed` inside `raw` bukcet after being uploaded to `Snowflake` by Airflow DAG.
+### 6. Trigger the Airflow DAG to orchestrate ELT process
+- Open Airflow UI at `http://localhost:8001/`
+![Airflow UI](./images/airflow_ui.png)
+- Trigger the DAG manually or wait for every 15 minutes schedule interval.
+![Airflow DAG](./images/airflow_dag.png)
+### Results
+- `transform_staging.stg_accounts`
+![stg_accounts](./images/stg_accounts.png)
+- If you want to see the SCD Type 2 in action, you can wait for the next DAG run. Then check the `snapshots.snap_accounts` and `transform_marts.dim_accounts` table in Snowflake:
+![snap_accounts](./images/snap_accounts.png)
+![dim_accounts](./images/dim_accounts.png)
 # ✉️ Contact
 Feel free to connect with me on the following platforms:
 - Email: khanhnhan012@gmail.com
