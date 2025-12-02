@@ -19,15 +19,70 @@ The pipeline is designed to handle the complete lifecycle of data:
     * A Custom Python Sink Connector consumes Kafka messages, batches them into **Parquet** files, and uploads them to **MinIO** (S3-compatible Data Lake).
 3. **Orchestration & Loading (ELT):**
     * **Apache Airflow** orchestrates the data movement.
-    * It downloads Parquet files from MinIO (Landing Zone).
+    * It downloads Parquet files from MinIO.
     * Loads data into **Snowflake**'s `RAW` schema using `COPY INTO` with `VARIANT` data type support.
-    * Moves processed files to an Archive Zone for incremental loading efficiency.
+    * Moves processed files to an Archive Zone (`processed`) for incremental loading efficiency.
 4. **Transformation Layer (dbt):**
     * **Staging:** Deduplicates CDC logs to retrieve the latest state of data.
     * **Snapshots:** Implements **SCD Type 2 (Slowly Changing Dimensions)** for the `accounts` table to track historical balance changes.
     * **Marts:** Models data into a **Fact Constellation Schema** with a **Bridge Table** to handle complex Many-to-Many relationships.
 
 # Project Structure
+```
+├── 📁 airflow
+│   ├── 📁 dags
+│   │   └── 🐍 dbt_wh_dags.py
+│   └── 📄 Dockerfile.airflow
+├── 📁 architecture
+├── 📁 images
+├── 📁 kafka-debezium
+│   ├── 🐍 sink_connector.py
+│   └── 🐍 source_connector.py
+├── 📁 postgres
+│   ├── 📄 create_tables.sql
+│   └── 📄 trigger_updated_at.sql
+├── 📁 realtime_banking_dbt
+│   ├── 📁 analyse
+│   ├── 📁 macros
+│   │   ├── ⚙️ .gitkeep
+│   │   └── 📄 positive_test.sql
+│   ├── 📁 models
+│   │   ├── 📁 marts
+│   │   │   ├── 📄 agg_daily_account_activity.sql
+│   │   │   ├── 📄 dim_accounts.sql
+│   │   │   ├── 📄 dim_customers.sql
+│   │   │   ├── 📄 fct_transactions.sql
+│   │   │   └── 📄 map_account_owner.sql
+│   │   ├── 📁 staging
+│   │   │   ├── 📄 stg_accounts.sql
+│   │   │   ├── 📄 stg_customers.sql
+│   │   │   ├── 📄 stg_customers_accounts.sql
+│   │   │   └── 📄 stg_transactions.sql
+│   │   ├── ⚙️ schema.yml
+│   │   └── ⚙️ sources.yml
+│   ├── 📁 seeds
+│   ├── 📁 snapshots
+│   │   ├── ⚙️ .gitkeep
+│   │   └── 📄 snap_accounts.sql
+│   ├── 📁 tests
+│   │   └── ⚙️ .gitkeep
+│   ├── ⚙️ .gitignore
+│   ├── ⚙️ .user.yml
+│   ├── 📝 README.md
+│   ├── ⚙️ dbt_project.yml
+│   ├── ⚙️ package-lock.yml
+│   └── ⚙️ packages.yml
+├── 📁 scripts
+│   └── 🐍 data_faker.py
+├── ⚙️ .gitignore
+├── 📄 LICENSE
+├── 📝 README.md
+├── ⚙️ docker-compose.airflow3.yaml
+├── ⚙️ docker-compose.yaml
+├── 🐍 main.py
+├── ⚙️ pyproject.toml
+└── 📄 uv.lock
+```
 
 # Technologies Used
 | Technology | Function |
@@ -39,7 +94,7 @@ The pipeline is designed to handle the complete lifecycle of data:
 | **Apache Airflow** | Workflow Orchestration (Python Operator, Bash Operator) |
 | **Snowflake** | Cloud Data Warehouse |
 | **dbt** | Data Transformation, Snapshot (SCD Type 2) & Testing (Build-in & Generic Tests) |
-| **Docker Compose** | Infrastructure as Code (IaC) |
+| **Docker** | Containerization and Environment Management |
 
 # Key Features Implemented
 
